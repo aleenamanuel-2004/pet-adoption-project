@@ -1,37 +1,114 @@
 <?php
-require_once 'includes/config.php';
-$page_title = 'Pet Adoption Center - Home';
-include 'includes/header.php';
+require_once '../includes/config.php';
 
-// Fetch categories from database
-$sql = "SELECT * FROM categories";
-$result = mysqli_query($conn, $sql);
+// Check if admin is logged in
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: login.php');
+    exit;
+}
+
+$page_title = 'Admin Dashboard';
+include '../includes/header.php';
+
+// Get statistics
+$total_adoptions = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM adoptions"));
+$total_breeds = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM breeds"));
+$total_categories = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM categories"));
+
+// Get recent adoptions
+$sql_recent = "SELECT a.*, b.name as breed_name, c.name as category_name 
+               FROM adoptions a
+               JOIN breeds b ON a.breed_id = b.id
+               JOIN categories c ON b.category_id = c.id
+               ORDER BY a.adoption_date DESC
+               LIMIT 5";
+$result_recent = mysqli_query($conn, $sql_recent);
 ?>
 
 <div class="container">
-    <h1>🐾 Pet Adoption Center</h1>
-    <p class="subtitle">Find your perfect companion today!</p>
-    
-    <div class="categories">
-        <?php while($category = mysqli_fetch_assoc($result)): ?>
-            <a href="breeds.php?category_id=<?php echo $category['id']; ?>" class="category-link">
-                <div class="category-card">
-                    <div class="category-image">
-                        <img src="images/categories/<?php echo $category['image']; ?>" alt="<?php echo $category['name']; ?>">
-                    </div>
-                    <h2><?php echo $category['name']; ?></h2>
-                    <p><?php echo $category['description']; ?></p>
-                </div>
-            </a>
-        <?php endwhile; ?>
+    <div class="admin-header">
+        <h1> Admin Dashboard</h1>
+        <div class="admin-info">
+            <span>Welcome, <strong><?php echo $_SESSION['admin_username']; ?></strong></span>
+            <a href="logout.php" class="logout-btn">Logout</a>
+            <a href="index.php" class="back-btn">← Dashboard</a>
+        <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
+    </div>
+    <h1>📋 All Adoptions</h1>
+    <!-- Statistics Cards -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-icon">🐾</div>
+            <div class="stat-info">
+                <h3><?php echo $total_adoptions; ?></h3>
+                <p>Total Adoptions</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-info">
+                <h3><?php echo $total_breeds; ?></h3>
+                <p>Total Breeds</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📁</div>
+            <div class="stat-info">
+                <h3><?php echo $total_categories; ?></h3>
+                <p>Categories</p>
+            </div>
+        </div>
     </div>
     
-    <div style="text-align: center; margin-top: 30px;">
-        <a href="admin/login.php" class="admin-link">Admin Login</a>
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons">
+            <a href="view_adoptions.php" class="action-btn">
+                <span class="btn-icon">📋</span>
+                View All Adoptions
+            </a>
+            <a href="../index.php" class="action-btn">
+                <span class="btn-icon">🏠</span>
+                Visit Website
+            </a>
+        </div>
+    </div>
+    
+    <!-- Recent Adoptions -->
+    <div class="recent-adoptions">
+        <h2>Recent Adoptions</h2>
+        <table class="adoption-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Pet Type</th>
+                    <th>Breed</th>
+                    <th>Adopter</th>
+                    <th>Email</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while($adoption = mysqli_fetch_assoc($result_recent)): ?>
+                    <tr>
+                        <td>#<?php echo $adoption['id']; ?></td>
+                        <td><?php echo $adoption['category_name']; ?></td>
+                        <td><?php echo $adoption['breed_name']; ?></td>
+                        <td><?php echo $adoption['adopter_name']; ?></td>
+                        <td><?php echo $adoption['email']; ?></td>
+                        <td><?php echo date('M d, Y', strtotime($adoption['adoption_date'])); ?></td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
     </div>
 </div>
 
 <?php
 mysqli_close($conn);
-include 'includes/footer.php';
+include '../includes/footer.php';
 ?>
